@@ -82,27 +82,46 @@ app.get("/users", (req, res) => {
     });
 });
 app.delete("/users/:id", (req, res) => {
-    const userId = req.params.id;
-    const { role } = req.body; // Get the role from request body
+    const { id } = req.params;
 
-    if (!role) {
-        return res.status(400).json({ message: "Role is required to delete a user" });
-    }
+    // Step 1: Check if the user exists in either table
+    db.query(
+        "SELECT 'judge' AS role FROM judges WHERE id = ? UNION SELECT 'lawyer' AS role FROM lawyers WHERE id = ?",
+        [id, id],
+        (err, results) => {
+            if (err) {
+                console.error("❌ Error checking user:", err);
+                return res.status(500).json({ message: "Internal server error." });
+            }
 
-    let table = role === "judge" ? "judges" : role === "lawyer" ? "lawyers" : null;
-    if (!table) return res.status(400).json({ message: "Invalid role" });
+            if (results.length === 0) {
+                return res.status(404).json({ message: "User not found." });
+            }
 
-    const sql = `DELETE FROM ${table} WHERE id = ?`;
-    db.query(sql, [userId], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+            // Step 2: Get the correct table based on the role
+            const role = results[0].role;
+            const table = role === "judge" ? "judges" : "lawyers";
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "User not found" });
+            // Step 3: Log for debugging
+            console.log(`Deleting from table: ${table}, ID: ${id}`);
+
+            // Step 4: Now delete from the correct table
+            db.query(`DELETE FROM ${table} WHERE id = ?`, [id], (err, deleteResult) => {
+                if (err) {
+                    console.error("❌ Error deleting user:", err);
+                    return res.status(500).json({ message: "Internal server error." });
+                }
+
+                if (deleteResult.affectedRows === 0) {
+                    return res.status(404).json({ message: "User not found in " + table });
+                }
+
+                res.status(200).json({ message: `✅ User deleted successfully from ${table}!` });
+            });
         }
-
-        res.json({ message: "User deleted successfully" });
-    });
+    );
 });
+
 
 
 
