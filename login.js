@@ -53,19 +53,21 @@ app.post("/login", (req, res) => {
 // ✅ Create User Route (Admin can add Judges & Lawyers)
 app.post("/users", (req, res) => {
     const { username, password, role } = req.body;
-
+    
     if (!username || !password || !role) {
         return res.status(400).json({ message: "Username, password, and role are required" });
     }
 
-    let table = role === "judge" ? "judges" : role === "lawyer" ? "lawyers" : null;
+    let table = role === "judge" ? "judges" : 
+                role === "lawyer" ? "lawyers" : 
+                role === "admin" ? "admins" : null;
+
     if (!table) return res.status(400).json({ message: "Invalid role" });
 
     const sql = `INSERT INTO ${table} (username, password) VALUES (?, ?);`;
     db.query(sql, [username, password], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-
-        res.json({ message: "User created successfully", userId: result.insertId });
+        res.json({ message: `${role} created successfully`, userId: result.insertId });
     });
 });
 
