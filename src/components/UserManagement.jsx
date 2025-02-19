@@ -95,7 +95,7 @@ const UserManagement = () => {
             users.map((user) => (
               <li key={user.id}>
                 {user.username} ({user.role}) 
-                <button onClick={() => handleDeleteUser(user.id)}>❌ Delete</button>
+                <button onClick={() => handleDeleteUser(user.id)}> Delete</button>
               </li>
             ))
           )}

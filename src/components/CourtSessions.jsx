@@ -1,116 +1,209 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 const CourtSessions = () => {
-  const [sessions, setSessions] = useState([]);
-  const [judges, setJudges] = useState([]);
-  const [lawyers, setLawyers] = useState([]);
-  const [newSession, setNewSession] = useState({
-    caseId: "",
-    judgeId: "",
-    lawyerId: "",
-    date: "",
-    time: "",
-    status: "scheduled",
-  });
+    const [hearings, setHearings] = useState([]);
+    const [cases, setCases] = useState([]);
+    const [judges, setJudges] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [newCase, setNewCase] = useState({
+        case_title: "",
+        judge_id: "",
+    });
 
-  useEffect(() => {
-    // Fetch court sessions
-    axios.get("http://localhost:5000/sessions")
-      .then((res) => setSessions(res.data))
-      .catch((err) => console.error("Error fetching sessions:", err));
+    useEffect(() => {
+        fetchHearings();
+        fetchCases();
+        fetchJudges();
+    }, []);
 
-    // Fetch available judges
-    axios.get("http://localhost:5000/users?role=judge")
-      .then((res) => setJudges(res.data))
-      .catch((err) => console.error("Error fetching judges:", err));
+    // ✅ Fetch Hearings
+    const fetchHearings = async () => {
+        try {
+            const response = await axios.get("http://localhost:5002/hearings");
+            setHearings(response.data);
+        } catch (error) {
+            console.error("❌ Failed to fetch hearings:", error);
+        }
+    };
 
-    // Fetch available lawyers
-    axios.get("http://localhost:5000/users?role=lawyer")
-      .then((res) => setLawyers(res.data))
-      .catch((err) => console.error("Error fetching lawyers:", err));
-  }, []);
+    // ✅ Fetch Cases
+    const fetchCases = async () => {
+        try {
+            const response = await axios.get("http://localhost:5002/cases");
+            setCases(response.data);
+        } catch (error) {
+            console.error("❌ Failed to fetch cases:", error);
+        }
+    };
 
-  const handleCreateSession = async () => {
-    try {
-      const res = await axios.post("http://localhost:5000/sessions", newSession);
-      setSessions([...sessions, { id: res.data.sessionId, ...newSession }]);
-      setNewSession({ caseId: "", judgeId: "", lawyerId: "", date: "", time: "", status: "scheduled" });
-    } catch (err) {
-      console.error("Error creating session:", err);
-    }
+    // ✅ Fetch Judges
+    const fetchJudges = async () => {
+        try {
+            const response = await axios.get("http://localhost:5002/judges");
+            setJudges(response.data);
+        } catch (error) {
+            console.error("❌ Failed to fetch judges:", error);
+        }
+    };
+
+    // ✅ Add Case (Automatically Schedules Hearing)
+    const handleAddCase = async () => {
+        if (!newCase.case_title.trim() || !newCase.judge_id) {
+            alert("❌ All fields are required!");
+            return;
+        }
+
+        try {
+            await axios.post("http://localhost:5002/cases", newCase);
+            alert("✅ Case added and hearing scheduled!");
+            setNewCase({ case_title: "", judge_id: "" });
+            fetchCases();
+            fetchHearings();
+        } catch (error) {
+            console.error("❌ Error adding case:", error.response?.data || error.message);
+        }
+    };
+
+    // ✅ Edit Hearing Date & Status
+    const handleEditHearing = async (hearing_id, hearing_date, status) => {
+        try {
+            await axios.put(`http://localhost:5002/hearings/${hearing_id}`, {
+                hearing_date,
+                status,
+            });
+            alert("✅ Hearing updated!");
+            fetchHearings();
+        } catch (error) {
+            console.error("❌ Error updating hearing:", error);
+        }
+    };
+
+    // ✅ Close Case
+    const handleCloseCase = async (caseId) => {
+      try {
+          const response = await fetch(`http://localhost:5002/cases/${caseId}/close`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+          });
+  
+          if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(errorText);
+          }
+  
+          console.log("✅ Case closed successfully");
+      } catch (error) {
+          console.error("❌ Error closing case:", error.message);
+      }
   };
+  
+  
 
-  const handleCancelSession = async (id) => {
-    try {
-      await axios.delete(`http://localhost:5000/sessions/${id}`);
-      setSessions(sessions.filter(session => session.id !== id));
-    } catch (err) {
-      console.error("Error canceling session:", err);
-    }
-  };
+    return (
+        <div>
+            <h2>📌 Manage Court Cases & Hearings</h2>
 
-  return (
-    <div>
-      <h3>⚖️ Court Sessions Management</h3>
+            {/* ✅ SEARCH BAR */}
+            <input
+                type="text"
+                placeholder="🔍 Search cases..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ marginBottom: "10px", padding: "5px", width: "100%" }}
+            />
 
-      {/* Create New Court Session */}
-      <div>
-        <h4>Schedule a Court Hearing</h4>
-        <input
-          type="text"
-          placeholder="Case ID"
-          value={newSession.caseId}
-          onChange={(e) => setNewSession({ ...newSession, caseId: e.target.value })}
-        />
-        <select
-          value={newSession.judgeId}
-          onChange={(e) => setNewSession({ ...newSession, judgeId: e.target.value })}
-        >
-          <option value="">Select Judge</option>
-          {judges.map((judge) => (
-            <option key={judge.id} value={judge.id}>{judge.username}</option>
-          ))}
-        </select>
+            {/* ✅ ADD CASE FORM */}
+            <h3>➕ Add New Case</h3>
+            <input
+                type="text"
+                placeholder="Case Title"
+                value={newCase.case_title}
+                onChange={(e) => setNewCase({ ...newCase, case_title: e.target.value })}
+                style={{ marginBottom: "10px", padding: "5px", width: "100%" }}
+            />
+            <select
+                value={newCase.judge_id}
+                onChange={(e) => setNewCase({ ...newCase, judge_id: e.target.value })}
+                style={{ marginBottom: "10px", padding: "5px", width: "100%" }}
+            >
+                <option value="">Select Judge</option>
+                {judges.map((j) => (
+                    <option key={j.id} value={j.id}>{j.username}</option>
+                ))}
+            </select>
+            <button onClick={handleAddCase} style={{ padding: "8px", cursor: "pointer" }}>
+                Add Case & Schedule Hearing
+            </button>
 
-        <select
-          value={newSession.lawyerId}
-          onChange={(e) => setNewSession({ ...newSession, lawyerId: e.target.value })}
-        >
-          <option value="">Select Lawyer</option>
-          {lawyers.map((lawyer) => (
-            <option key={lawyer.id} value={lawyer.id}>{lawyer.username}</option>
-          ))}
-        </select>
+            {/* ✅ VIEW CASES */}
+            <h3>📜 Cases</h3>
+            <table border="1" style={{ width: "100%", textAlign: "left" }}>
+                <thead>
+                    <tr>
+                        <th>Case Title</th>
+                        <th>Judge</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {cases
+                        .filter((c) => c.case_title.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map((c) => (
+                            <tr key={c.case_id}>
+                                <td>{c.case_title}</td>
+                                <td>{c.judge_name}</td>
+                                <td>{c.status}</td>
+                                <td>
+                                    {c.status !== "Closed" && (
+                                        <button onClick={() => handleCloseCase(c.case_id)}>❌ Close Case</button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                </tbody>
+            </table>
 
-        <input
-          type="date"
-          value={newSession.date}
-          onChange={(e) => setNewSession({ ...newSession, date: e.target.value })}
-        />
-
-        <input
-          type="time"
-          value={newSession.time}
-          onChange={(e) => setNewSession({ ...newSession, time: e.target.value })}
-        />
-
-        <button onClick={handleCreateSession}>Schedule Hearing</button>
-      </div>
-
-      {/* Display Scheduled Sessions */}
-      <h4>Upcoming Court Hearings</h4>
-      <ul>
-        {sessions.map((session) => (
-          <li key={session.id}>
-            Case ID: {session.caseId} | Judge: {session.judgeId} | Lawyer: {session.lawyerId} | 
-            Date: {session.date} | Time: {session.time} | Status: {session.status}
-            <button onClick={() => handleCancelSession(session.id)}>Cancel</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+            {/* ✅ VIEW HEARINGS LIST */}
+            <h3>📜 Scheduled Hearings</h3>
+            <table border="1" style={{ width: "100%", textAlign: "left" }}>
+                <thead>
+                    <tr>
+                        <th>Case Title</th>
+                        <th>Judge</th>
+                        <th>Hearing Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {hearings.map((hearing) => (
+                        <tr key={hearing.hearing_id}>
+                            <td>{hearing.case_title}</td>
+                            <td>{hearing.judge_name}</td>
+                            <td>
+                                <input
+                                    type="datetime-local"
+                                    value={new Date(hearing.hearing_date).toISOString().slice(0, 16)}
+                                    onChange={(e) => handleEditHearing(hearing.hearing_id, e.target.value, hearing.status)}
+                                />
+                            </td>
+                            <td>
+                                <select
+                                    value={hearing.status}
+                                    onChange={(e) => handleEditHearing(hearing.hearing_id, hearing.hearing_date, e.target.value)}
+                                >
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
 };
 
 export default CourtSessions;
