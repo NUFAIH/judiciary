@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import '../css/Login.css'; // Import the CSS file
 
 const Login = () => {
   const navigate = useNavigate();
@@ -61,34 +62,53 @@ const Login = () => {
   };
 
   return (
-    <div>
-      <h2>Login Page</h2>
-      <form onSubmit={handleLogin}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        
-        {/* Submit Button with Loading State */}
-        <button type="submit" disabled={loading}>
-          {loading ? (
-            <span>Loading...</span> // Show loading text or spinner
-          ) : (
-            'Login'
-          )}
-        </button>
-      </form>
+    <div className="login-container">
+      {/* Left Section: Welcome Message and Description */}
+      <div className="welcome-section">
+        <h1 className="welcome-title">Welcome to the Judiciary System</h1>
+        <p className="welcome-text">
+          The Judiciary System Management platform is designed to streamline judicial processes, ensuring efficiency, transparency, and security for all users. Whether you're a lawyer, judge, or administrator, this system provides the tools you need to manage cases, documents, and communications effectively.
+        </p>
+        <p className="welcome-text">
+          Please log in to access your account and continue your work.
+        </p>
+      </div>
 
-      {/* Error Message */}
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+      {/* Right Section: Login Form */}
+      <div className="login-card">
+        <h2 className="login-title">Login to Your Account</h2>
+        <p className="login-subtitle">Enter your credentials to access the system</p>
+        <form className="login-form" onSubmit={handleLogin}>
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <button type="submit" disabled={loading} className="login-button">
+            {loading ? (
+              <span className="loading-text">Logging in...</span>
+            ) : (
+              'Login'
+            )}
+          </button>
+        </form>
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+      </div>
     </div>
   );
 };
